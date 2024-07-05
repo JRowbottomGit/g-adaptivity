@@ -6,9 +6,9 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, GATConv, TransformerConv
 from torch_geometric.utils import add_self_loops, remove_self_loops
 
-from firedrake_difFEM.difFEM_poisson_1d import torch_FEM_1D
-from firedrake_difFEM.difFEM_poisson_2d import torch_FEM_2D
-from params_poisson import get_arg_list
+from firedrake_difFEM.difFEM_1d import torch_FEM_1D
+from firedrake_difFEM.difFEM_2d import torch_FEM_2D
+from params import get_arg_list
 from feature_extractors import GlobalFeatureExtractorGNN, GlobalFeatureExtractorCNN
 from utils_data import reshape_grid_to_fd_tensor, reshape_fd_tensor_to_grid
 from GRAND_plus import GRAND_conv, GRAND_plusConv, GAT_plus
@@ -116,10 +116,7 @@ def get_conv(opt, conv_type, in_dim, out_dim, feat_dim=None):
         return GRAND_conv(opt, in_dim, out_dim, heads=1)
     elif conv_type == 'GRAND_plus':
         return GRAND_plusConv(opt, in_dim, out_dim, global_feat_dim=feat_dim, heads=1, concat=False, beta=False, dropout=0.0,
-                                         edge_dim=None, bias=False, root_weight=False, return_attention_weights=opt['build_QK_evol_plots'])
-        #warning pyg 2.5 doesn't accept kwargs
-        # return GRAND_plusConv(opt, in_dim, out_dim, heads=1, concat=False, beta=False, dropout=0.0,
-        #                                  edge_dim=None, bias=False, root_weight=False, return_attention_weights=opt['build_QK_evol_plots'])
+                                         edge_dim=None, bias=False, root_weight=False)
     elif conv_type == "GAT_plus":
         return GAT_plus(opt, in_dim, out_dim)
     else:
@@ -156,10 +153,6 @@ class GNN(nn.Module):
             self.in_dims += [1]
         if self.opt['gnn_inc_feat_uu']:
             self.in_dims += [1]
-        if self.opt['gnn_inc_local_feat_f']:
-            pass
-        if self.opt['gnn_inc_local_feat_uu']:
-            pass
         if self.opt['gnn_inc_glob_feat_f']:
             self.in_dims += [opt['global_feat_dim']]
         if self.opt['gnn_inc_glob_feat_uu']:
@@ -249,10 +242,10 @@ class GNN(nn.Module):
         if self.opt['gnn_inc_glob_feat_f']:
             if self.opt['data_type'] != 'randg_mix':
                 num_nodes = self.dataset.x_comp_shared.shape[0]
-                f_grid = reshape_fd_tensor_to_grid(f, self.dataset.mapping_tensor, [num_nodes, num_nodes], batch_size)
+                f_grid = reshape_fd_tensor_to_grid(f, self.dataset.mapping_tensor, [num_nodes, num_nodes], batch_size, self.dim)
             else:
                 num_nodes = int(np.sqrt(data.x_comp.shape[0]))
-                f_grid = reshape_fd_tensor_to_grid(f, data.mapping_tensor, [num_nodes, num_nodes], batch_size)
+                f_grid = reshape_fd_tensor_to_grid(f, data.mapping_tensor, [num_nodes, num_nodes], batch_size, self.dim)
 
             global_features_cnn_f = self.global_feature_extractor_cnn_f(f_grid.unsqueeze(1))
             repeats = torch.bincount(batch)
@@ -263,10 +256,10 @@ class GNN(nn.Module):
         if self.opt['gnn_inc_glob_feat_uu']:
             if self.opt['data_type'] != 'randg_mix':
                 num_nodes = self.dataset.x_comp_shared.shape[0]
-                uu_grid = reshape_fd_tensor_to_grid(uu, self.dataset.mapping_tensor, [num_nodes, num_nodes], batch_size)
+                uu_grid = reshape_fd_tensor_to_grid(uu, self.dataset.mapping_tensor, [num_nodes, num_nodes], batch_size, self.dim)
             else:
                 num_nodes = int(np.sqrt(data.x_comp.shape[0]))
-                uu_grid = reshape_fd_tensor_to_grid(uu, data.mapping_tensor, [num_nodes, num_nodes], batch_size)
+                uu_grid = reshape_fd_tensor_to_grid(uu, data.mapping_tensor, [num_nodes, num_nodes], batch_size, self.dim)
 
             global_features_cnn_uu = self.global_feature_extractor_cnn_uu(uu_grid.unsqueeze(1))
             repeats = torch.bincount(batch)
@@ -314,7 +307,7 @@ class GNN(nn.Module):
         elif self.opt['loss_type'] == 'pde_loss':
             coeffs_batched_list, x_phys_batched_list, sol_batched_list = [], [], []
             for b_idx in range(num_in_batch):
-                if self.opt['data_type'] == 'randg_mix':# and hasattr(data, 'batch_dict'):
+                if self.opt['data_type'] == 'randg_mix':
                     c_list_torch = [torch.from_numpy(c_0).to(self.opt['device']) for c_0 in pde_params['centers'][b_idx]]
                     s_list_torch = [torch.from_numpy(s_0).to(self.opt['device']) for s_0 in pde_params['scales'][b_idx]]
                     mesh = data.mesh[b_idx]

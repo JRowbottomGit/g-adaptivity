@@ -215,7 +215,7 @@ def torch_FEM_1D(opt, mesh_points, quad_points, num_meshpoints, c_list, s_list):
     internal_mesh_points = mesh_points[1:-1]
     num_internal_meshpoints = internal_mesh_points.shape[0]
     # build a (N)x(N) stiffness matrix, internal is (N-1)x(N-1) but need corners for load vector adjustment terms
-    A = build_stiffness_matrix(mesh_points, quad_points, num_internal_meshpoints, stiff_quad_points, vectorise=True, keyops=False)
+    A = build_stiffness_matrix(mesh_points, quad_points, num_internal_meshpoints, stiff_quad_points, vectorise=True)
     A_int = -A[1:-1, 1:-1]  # remove the first and last rows and columns
     # build a (N-1)x1 internal load vector
     BC1 = u_true_exact_1d(torch.tensor([mesh_points[0]]), c_list, s_list)  # 0.0 # Left endpoint Dirichlet BC

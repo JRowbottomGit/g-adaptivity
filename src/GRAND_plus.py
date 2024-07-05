@@ -143,14 +143,8 @@ class GRAND_plusConv(MessagePassing):
         if isinstance(in_channels, int):
             in_channels = (in_channels, in_channels)
 
-        if self.opt['gnn_hyper_QK']:
-            self.lin_keyW = QKNet(opt, in_channels[0], in_channels[0] * heads * out_channels)
-            self.lin_keyB = nn.Parameter(torch.zeros(1, heads, out_channels))
-            self.lin_queryW = QKNet(opt, in_channels[1], in_channels[1] * heads * out_channels)
-            self.lin_queryB = nn.Parameter(torch.zeros(1, heads, out_channels))
-        else:
-            self.lin_key = Linear(in_channels[0], heads * out_channels)
-            self.lin_query = Linear(in_channels[1], heads * out_channels)
+        self.lin_key = Linear(in_channels[0], heads * out_channels)
+        self.lin_query = Linear(in_channels[1], heads * out_channels)
 
         # self.lin_value = Linear(in_channels[0], heads * out_channels)
         self.lin_value = nn.Identity(in_channels, heads * out_channels)  # Overidding channel mixing to identity
@@ -192,37 +186,11 @@ class GRAND_plusConv(MessagePassing):
         self.stored_ei = None # attribute for storing edge_index for tracking attention weights
         self.stored_alpha = None # attribute for storing attention weights for tracking
 
-    def QK_init(self):
-        if self.opt['gnn_QK_init'] == 'identity':
-            #initialise QK matrices to identity
-            nn.init.eye_(self.lin_key.weight)
-            nn.init.eye_(self.lin_query.weight)
-        elif self.opt['gnn_QK_init'] == 'psd':
-            #initialise QK matrices to positive semi-definite
-            K = self.lin_key.weight
-            self.lin_key.weight = nn.Parameter(K @ K.T)
-            Q = self.lin_query.weight
-            self.lin_query.weight = nn.Parameter(Q @ Q.T)
-        elif self.opt['gnn_QK_init'] == 'nsd':
-            #initialise QK matrices to negative semi-definite
-            K = self.lin_key.weight
-            self.lin_key.weight = nn.Parameter(-K @ K.T)
-            Q = self.lin_query.weight
-            self.lin_query.weight = nn.Parameter(-Q @ Q.T)
-        elif self.opt['gnn_QK_init'] == 'pnsd':
-            # initialise Q matrices as positive semi-definite and K matrices as negative semi-definite
-            K = self.lin_key.weight
-            self.lin_key.weight = nn.Parameter(-K @ K.T)
-            Q = self.lin_query.weight
-            self.lin_query.weight = nn.Parameter(Q @ Q.T)
-        else:
-            self.lin_key.reset_parameters()
-            self.lin_query.reset_parameters()
-
 
     def reset_parameters(self):
         super().reset_parameters()
-        self.QK_init()
+        self.lin_key.reset_parameters()
+        self.lin_query.reset_parameters()
 
         # self.lin_value.reset_parameters() #not resetting value as it's identity
         if self.edge_dim:
@@ -254,12 +222,8 @@ class GRAND_plusConv(MessagePassing):
         if isinstance(x, Tensor):
             x: PairTensor = (x, x)
 
-        if self.opt['gnn_hyper_QK']:
-            query = torch.matmul(self.lin_queryW(global_features), x[1].view(-1, H, C) + self.lin_queryB)
-            key = torch.matmul(self.lin_keyW(global_features), x[0].view(-1, H, C) + self.lin_keyB)
-        else:
-            query = self.lin_query(x[1]).view(-1, H, C)
-            key = self.lin_key(x[0]).view(-1, H, C)
+        query = self.lin_query(x[1]).view(-1, H, C)
+        key = self.lin_key(x[0]).view(-1, H, C)
         value = self.lin_value(x[0]).view(-1, H, C)
 
         self.mesh_points = x[0]
