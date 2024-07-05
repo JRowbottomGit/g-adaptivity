@@ -1,7 +1,8 @@
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from scipy.interpolate import UnivariateSpline
 
-from firedrake_difFEM.difFEM_poisson_1d import fn_expansion,gradient_meshpoints_1D_Burgers_PDE_loss_direct_mse,plotting_data_burgers,get_Burgers_initial_coeffs,get_Burgers_initial_coeffs_old,torch_FEM_Burgers_1D,u_true_exact_1d_vec,remesh_1d
+from firedrake_difFEM.difFEM_1d import fn_expansion,gradient_meshpoints_1D_Burgers_PDE_loss_direct_mse,plotting_data_burgers,get_Burgers_initial_coeffs,get_Burgers_initial_coeffs_old,torch_FEM_Burgers_1D,u_true_exact_1d_vec,remesh_1d
 from classical_meshing.ma_mesh_1d import MMPDE5_1d_burgers,diag_hessian
 from utils_eval import *
 
@@ -152,6 +153,9 @@ def evaluate_model_fine_burgers_time_step(model, dataset, opt):
                         plt.plot(quad_points.detach().numpy(), sol_grid.detach().numpy())
                         plt.plot(quad_points.detach().numpy(), sol_fine[l,j,:].detach().numpy())
                         plt.scatter(grid_coords, 0.0 * grid_coords, label='Mesh points', color='blue', marker='o')
+                        plt.xlabel('x')
+                        plt.ylabel('u')
+                        plt.title(f"Evolution of the Solution)")
                         plt.show()
 
                         L2_grid = F.mse_loss(sol_grid, sol_fine[l, j, :])
@@ -248,10 +252,10 @@ def evaluate_model_fine_burgers_time_step(model, dataset, opt):
             plt.figure()
             for j in range(num_meshpoints):
                 plt.plot(timesteps[0:-1],MA_mesh_save[0:-1,j].detach().numpy())
+            plt.xlabel('Time')
+            plt.ylabel('Mesh points')
+            plt.title('Evolution of MA mesh points')
             plt.show()
-            input('Press Enter5 to continue...')
-
-        #input('Press Enter2 to continue...')
 
         MA_time = time.process_time()-start_time
 
@@ -310,17 +314,6 @@ def evaluate_model_fine_burgers_time_step(model, dataset, opt):
                                                  s=0)  # s=0 ensures it interpolates through the data points
                 un_coeffs_ML = torch.tensor(spline_remesh(MLmodel_coords.detach().numpy()), dtype=un_coeffs_ML.dtype)
 
-                #if opt['plots_multistep_eval'] and l % 1 == 0:
-                if False and l % 5 == 0:
-                    plt.figure()
-                    plt.plot(quad_points.detach().numpy(), sol_ML.detach().numpy())
-                    plt.plot(quad_points.detach().numpy(), sol_fine[l,j,:].detach().numpy())
-                    plt.scatter(MLmodel_coords, 0.0 * MLmodel_coords_old, label='Mesh points', color='blue', marker='o')
-                    plt.legend()
-                    plt.ylim(top=1.5*opt['gauss_amplitude'],bottom=-opt['gauss_amplitude'])
-                    plt.savefig('../images/MLmodel_mesh_burgers' + str(l) + '.png')
-                    plt.show()
-                    input('Press Enter3 to continue...')
         #torch_FEM_Burgers_1D(opt, mesh_points, quad_points, num_meshpoints, un_coeffs, BC1=None, BC2=None)
 
         # End the timer
@@ -335,8 +328,10 @@ def evaluate_model_fine_burgers_time_step(model, dataset, opt):
             plt.figure()
             for j in range(num_meshpoints):
                 plt.plot(timesteps[0:-1],ML_mesh_save[0:-1,j].detach().numpy())
+            plt.xlabel('Time')
+            plt.ylabel('Mesh points')
+            plt.title('Evolution of ML model mesh points')
             plt.show()
-            input('Plot MLmodel Press Enter5 to continue...')
 
         # except:
         #     L2_MLmodel=L2_grid
@@ -474,21 +469,8 @@ def plot_trained_dataset_1d_burgers(dataset, model, opt, model_out=None, show_me
         legend_list.append('Mesh points')
         axs2[i].legend(legend_list)
 
-    #plt.show()
-
-
-
-    if opt['wandb_log_plots'] and show_mesh_evol_plots:
-        wandb.log({'fem_on_x_comp': wandb.Image(fig0)})
-        wandb.log({'fem_on_mmpde5': wandb.Image(fig1)})
-        wandb.log({'fem_on_MLmodel': wandb.Image(fig2)})
-        if opt['model'] in ['backFEM_1D', 'learn_Mon_1D', 'GNN']:
-            wandb.log({'mesh_evol': wandb.Image(model.mesh_fig)})
-        if opt['model'] in ['backFEM_1D']:
-            wandb.log({'loss': wandb.Image(model.loss_fig)})
-
     if opt['show_plots']:
         plt.show()
-        fig0.savefig('../images/regular_mesh_burgers.png')
-        fig1.savefig('../images/MMPDE5_mesh_burgers.png')
-        fig2.savefig('../images/MLmodel_mesh_burgers.png')
+        fig0.savefig('../output/regular_mesh_burgers.png')
+        fig1.savefig('../output/MMPDE5_mesh_burgers.png')
+        fig2.savefig('../output/MLmodel_mesh_burgers.png')

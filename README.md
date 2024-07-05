@@ -1,5 +1,5 @@
 ## g-adaptivity
-This repository is the official implementation of [g-adaptivity](https://arxiv.org/abs/2030.12345). A GNN based approach to adaptive mesh refinement for FEM
+This repository is the official implementation of [g-adaptivity](https://arxiv.org/abs/2030.12345). A GNN based approach to adaptive mesh refinement for FEM.
 
 
 ## Requirements
@@ -46,7 +46,7 @@ python run_pipeline.py
 Configs are stored in `params.py`.
 
 ## Cite us
-If you found this work useful, please consider citing our paper
+If you found this work useful, please consider citing our paper:
 
 ```
 @misc{g-adaptivity,

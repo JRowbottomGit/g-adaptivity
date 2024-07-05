@@ -6,13 +6,15 @@ import torch
 import torchquad
 from torchquad import set_up_backend
 
-from params_poisson import get_params, run_params, tf_sweep_args, set_seed, get_arg_list
+from params import get_params, run_params, tf_sweep_args, set_seed, get_arg_list
+# from params_burgers import get_params, run_params, tf_sweep_args, set_seed, get_arg_list
+
 from data_all import AllMeshInMemoryDataset
 from utils_data import make_data_name
 from utils_eval import plot_trained_dataset_1d, plot_trained_dataset_2d, evaluate_model_fine
 from run_GNN import main as run_GNN, get_data
-from firedrake_difFEM.difFEM_poisson_1d import Fixed_Mesh_1D, backFEM_1D
-from firedrake_difFEM.difFEM_poisson_2d import Fixed_Mesh_2D, backFEM_2D
+from firedrake_difFEM.difFEM_1d import Fixed_Mesh_1D, backFEM_1D
+from firedrake_difFEM.difFEM_2d import Fixed_Mesh_2D, backFEM_2D
 from utils_eval_Burgers import evaluate_model_fine_burgers, evaluate_model_fine_burgers_time_step, plot_trained_dataset_1d_burgers
 
 def get_model(opt):
@@ -69,7 +71,7 @@ def main(opt):
     end_train_time = time.time()
 
     start_eval_time = time.time()
-    if opt['loss_type'] == 'modular':
+    if opt['pde_type'] == 'Burgers' and opt['loss_type'] == 'modular':
         if 'burgers' in opt['grad_type']:
             if opt['num_eval_time_steps'] > 1:
                 results_df_fine, times_df = evaluate_model_fine_burgers_time_step(model, dataset, opt)
@@ -77,7 +79,6 @@ def main(opt):
                 results_df_fine, times_df = evaluate_model_fine_burgers(model, dataset, opt)
     else:
         results_df_fine, times_df = evaluate_model_fine(model, dataset, opt, fine_eval=True)
-
     end_eval_time = time.time()
 
     dim = len(opt['mesh_dims'])

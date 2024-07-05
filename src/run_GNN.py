@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
-from params_poisson import get_params, run_params, set_seed, get_arg_list
+from params import get_params, run_params, set_seed, get_arg_list
 from utils_main import plot_training_evol
 from data import generate_mesh_2d
 from data import make_data_name, MeshInMemoryDataset
@@ -10,25 +10,28 @@ from data_mixed import MeshInMemoryDataset_Mixed
 from data_mixed_loader import Mixed_DataLoader
 from data_all import AllMeshInMemoryDataset
 from GNN import GNN, MLP
-from MON_NN import learn_Mon_RK4_1D, learn_Mon_RK4_2D
-from firedrake_difFEM.difFEM_poisson_2d import gradient_meshpoints_2D
-from firedrake_difFEM.difFEM_poisson_1d import gradient_meshpoints_1D
+from firedrake_difFEM.difFEM_2d import gradient_meshpoints_2D
+from firedrake_difFEM.difFEM_1d import gradient_meshpoints_1D
 
 
 def get_data(opt, train_test="test"):
     mesh_dims = get_arg_list(opt['mesh_dims'])
+    opt = make_data_name(opt, train_test)
 
     if opt['data_type'] == 'all':
         dataset = AllMeshInMemoryDataset(f"../data/{opt['data_name']}", mesh_dims, opt)
+        # dataset = AllMeshInMemoryDataset(f"../data/{train_test_data_name}", mesh_dims, opt)
         mask = (dataset.data.pde_params['scale_value'] == opt['scale']) & (dataset.data.pde_params['mon_power'] == opt['mon_power'])
         dataset = dataset[mask]
 
     elif opt['data_type'] == 'randg_mix':
         dataset = MeshInMemoryDataset_Mixed(f"../data/{opt['data_name']}", "test", opt['num_train'], mesh_dims, opt)
+        # dataset = MeshInMemoryDataset_Mixed(f"../data/{train_test_data_name}", "test", opt['num_train'], mesh_dims, opt)
 
     elif opt['dataset'] in ['fd_mmpde_1d', 'fd_mmpde_2d', 'fd_ma_2d', 'fd_M2N_2d']:  # firedrake MA grid with pde data
         num_data = opt['num_train'] if train_test == "train" else opt['num_test']
         dataset = MeshInMemoryDataset(f"../data/{opt['data_name']}", train_test, num_data, mesh_dims, opt)  # 11x11 node mesh
+        # dataset = MeshInMemoryDataset(f"../data/{train_test_data_name}", train_test, num_data, mesh_dims, opt)  # 11x11 node mesh
 
     elif opt['dataset'] == 'grid':
         dataset = generate_mesh_2d(mesh_dims[0], mesh_dims[1])
@@ -85,7 +88,7 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=opt['lr'], weight_decay=opt['decay'])
 
     model.train()
-    loss_list, mon_power_list, mon_scale_list,  mon_reg_list = [], [], [], []
+    loss_list = []
     batch_loss_list = []
     best_loss = float('inf')
 

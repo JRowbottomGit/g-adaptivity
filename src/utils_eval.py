@@ -13,11 +13,11 @@ from matplotlib.colors import LinearSegmentedColormap
 import wandb
 
 from firedrake_difFEM.solve_poisson import poisson2d_fgauss_b0, poisson2d_fmultigauss_bcs, poisson1d_fmultigauss_bcs, plot_solutions
-from firedrake_difFEM.difFEM_poisson_2d import soln
+from firedrake_difFEM.difFEM_2d import soln
 from utils_main import vizualise_grid_with_edges
 from utils_data import reshape_grid_to_fd_tensor, map_firedrake_to_cannonical_ordering_2d, reshape_fd_tensor_to_grid
-from firedrake_difFEM.difFEM_poisson_1d import Fixed_Mesh_1D, backFEM_1D, torch_FEM_1D, u_true_exact_1d
-from firedrake_difFEM.difFEM_poisson_2d import torch_FEM_2D, u_true_exact_2d
+from firedrake_difFEM.difFEM_1d import Fixed_Mesh_1D, backFEM_1D, torch_FEM_1D, u_true_exact_1d
+from firedrake_difFEM.difFEM_2d import torch_FEM_2D, u_true_exact_2d
 
 from data_mixed_loader import Mixed_DataLoader
 
@@ -122,7 +122,7 @@ def evaluate_model_fine(model, dataset, opt, fine_eval=True):
             eval_grid = [X, Y]
             eval_vec = np.reshape(np.array([X, Y]), [2, opt['eval_quad_points']**2])
 
-    if opt['data_type'] == 'randg_m2n':# and opt['batch_size'] > 1:
+    if opt['data_type'] == 'randg_mix':# and opt['batch_size'] > 1:
         exclude_keys = ['boundary_nodes_dict', 'mapping_dict', 'node_boundary_map', 'eval_errors', 'pde_params']
         follow_batch = []
         loader = Mixed_DataLoader(dataset, batch_size=1, shuffle=False, exclude_keys=exclude_keys, follow_batch=follow_batch)
@@ -137,7 +137,7 @@ def evaluate_model_fine(model, dataset, opt, fine_eval=True):
             else:
                 print(f"Overfitting on batch {i} of {opt['overfit_num']}")
 
-        if opt['data_type'] == 'randg_m2n':
+        if opt['data_type'] == 'randg_mix':
             mesh = data.mesh[0]
             deformed_mesh = data.mesh_deformed[0]
             c_list = data.batch_dict[0]['pde_params']['centers']
@@ -166,7 +166,7 @@ def evaluate_model_fine(model, dataset, opt, fine_eval=True):
 
         if fine_eval:
             try: #from data_all.py and data_all_fine.py do this
-                if opt['data_type'] == 'randg_m2n':
+                if opt['data_type'] == 'randg_mix':
                     eval_errors = data.batch_dict[0]['eval_errors']
                     L1_grid, L2_grid = eval_errors['L1_grid'].item(), eval_errors['L2_grid'].item()
                     L1_MA, L2_MA = eval_errors['L1_MA'].item(), eval_errors['L2_MA'].item()
@@ -643,15 +643,6 @@ def plot_trained_dataset_1d(dataset, model, opt, model_out=None, show_mesh_evol_
             axs2[i].plot([tick, tick], [ymin, ymin + dash_length], color=dashcol, linestyle='-', linewidth=dashwid)
         axs2[i].legend()
 
-    if opt['wandb_log_plots'] and show_mesh_evol_plots:
-        wandb.log({'fem_on_x_comp': wandb.Image(fig0)})
-        wandb.log({'fem_on_mmpde5': wandb.Image(fig1)})
-        wandb.log({'fem_on_MLmodel': wandb.Image(fig2)})
-        if opt['model'] in ['backFEM_1D', 'learn_Mon_1D', 'GNN']:
-            wandb.log({'mesh_evol': wandb.Image(model.mesh_fig)})
-        if opt['model'] in ['backFEM_1D']:
-            wandb.log({'loss': wandb.Image(model.loss_fig)})
-
     if opt['show_plots']:
         plt.show()
 
@@ -659,7 +650,7 @@ def plot_trained_dataset_1d(dataset, model, opt, model_out=None, show_mesh_evol_
 def plot_trained_dataset_2d(dataset, model, opt, show_mesh_evol_plots=False):
     # Create a DataLoader with batch size of 1 to load one data point at a time
     # loader = DataLoader(dataset, batch_size=1)
-    if opt['data_type'] == 'randg_m2n':# and opt['batch_size'] > 1:
+    if opt['data_type'] == 'randg_mix':# and opt['batch_size'] > 1:
         exclude_keys = ['boundary_nodes_dict', 'mapping_dict', 'node_boundary_map', 'eval_errors', 'pde_params']
         follow_batch = []
         loader = Mixed_DataLoader(dataset, batch_size=1, shuffle=False, exclude_keys=exclude_keys, follow_batch=follow_batch)
@@ -721,7 +712,7 @@ def plot_trained_dataset_2d(dataset, model, opt, show_mesh_evol_plots=False):
                 print(f"Overfitting on batch {i} of {opt['overfit_num']}")
 
         # todo check this annoying property of PyG I believe, making indexing necessary
-        if opt['data_type'] == 'randg_m2n':
+        if opt['data_type'] == 'randg_mix':
             mesh = data.mesh[0]
             deformed_mesh = data.mesh_deformed[0]
             c_list = data.batch_dict[0]['pde_params']['centers']
@@ -745,7 +736,7 @@ def plot_trained_dataset_2d(dataset, model, opt, show_mesh_evol_plots=False):
         nx.draw(G, pos=positions, ax=axs1[i], node_size=1, width=0.5, with_labels=False)
 
         # #2) plot the FEM on MA (target phys) mesh
-        if opt['data_type'] == 'randg_m2n':
+        if opt['data_type'] == 'randg_mix':
             mesh = data.mesh[0]
         else:
             mesh = dataset.mesh

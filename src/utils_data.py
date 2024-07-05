@@ -5,7 +5,7 @@ import torch
 import wandb
 import matplotlib.pyplot as plt
 
-from params_poisson import get_params, run_params, get_arg_list
+from params import get_params, run_params, get_arg_list
 
 def to_float32(obj):
     if isinstance(obj, torch.Tensor):
@@ -229,7 +229,7 @@ def make_data_name(opt, train_test="test"):
                 data_name = f"{opt['data_type']}_2d_test_{opt['mesh_type']}" \
                                    f"_{mesh_dims[0]}_{formatted_mon_reg}reg"
 
-    elif opt['data_type'] == 'fixed':
+    elif opt['data_type'] == 'structured':
         num_data = opt['num_train'] if train_test == 'train' else opt['num_test']
         if data_dim == 1:
             data_name = f"{opt['data_type']}_1d_{train_test}_{num_data}_{mesh_dims[0]}_" \
@@ -252,16 +252,15 @@ def make_data_name(opt, train_test="test"):
             else:
                 data_name = f"{opt['data_type']}_2d_{train_test}_{num_data}_{opt['mesh_type']}_{mesh_dims[0]}_{formatted_mon_reg}reg"
 
-    elif opt['data_type'] == 'randg_m2n':
+    elif opt['data_type'] == 'randg_mix':
         num_data = opt['num_train'] if train_test == 'train' else opt['num_test']
         if data_dim == 1:
             data_name = f"{opt['data_type']}_1d_{train_test}_{num_data}_{formatted_mon_reg}reg_{opt['num_gauss_range'][0]}_{opt['num_gauss_range'][-1]}gauss"
         elif data_dim == 2:
             data_name = f"{opt['data_type']}_2d_{train_test}_{num_data}_{formatted_mon_reg}reg_{opt['num_gauss_range'][0]}_{opt['num_gauss_range'][-1]}gauss"
 
-    elif opt['data_type'] == 'asym_sweep2d':
-        if data_dim == 2:
-            data_name = f"{opt['data_type']}_2d_test_{opt['mesh_type']}_{mesh_dims[0]}_{formatted_mon_reg}reg_{opt['num_gauss']}gauss_sx{opt['scale_x']}_sy{opt['scale_y']}"
+
+
 
     opt['data_name'] = data_name
 
