@@ -1,5 +1,5 @@
 ## g-adaptivity
-This repository is the official implementation of [g-adaptivity](https://arxiv.org/abs/2030.12345). A GNN based approach to adaptive mesh refinement for FEM.
+This repository is the official implementation of [g-adaptivity](https://arxiv.org/abs/2407.04516). A GNN based approach to adaptive mesh refinement for FEM.
 
 
 ## Requirements
